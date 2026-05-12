@@ -1,63 +1,294 @@
 { config, pkgs, ... }:
 
 {
-  imports = [ ./hardware-configuration.nix ];
+  imports = [
+    ./hardware-configuration.nix
+  ];
 
+  # ========================================
+  # SYSTEM VERSION
+  # ========================================
+
+  system.stateVersion = "24.11";
+
+  # ========================================
   # BOOT
+  # ========================================
+
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
 
+  boot.kernelPackages = pkgs.linuxPackages_latest;
+
+  # ========================================
   # NETWORK
+  # ========================================
+
   networking.hostName = "nixos";
   networking.networkmanager.enable = true;
 
+  # ========================================
   # TIME + LOCALE
+  # ========================================
+
   time.timeZone = "America/Bogota";
+
   i18n.defaultLocale = "es_CO.UTF-8";
 
-  # USER
-  users.users.mj = {
-    isNormalUser = true;
-    description = "mj";
-    extraGroups = [ "wheel" "networkmanager" "video" "audio" ];
+  # ========================================
+  # NIX
+  # ========================================
+
+  nix.settings = {
+    experimental-features = [
+      "nix-command"
+      "flakes"
+    ];
+
+    auto-optimise-store = true;
   };
 
-  # NIRI
-  programs.niri.enable = true;
-  services.displayManager.gdm.enable = true;
-
-  # XDG portal (importante en Wayland)
-  xdg.portal = {
-    enable = true;
-    extraPortals = [ pkgs.xdg-desktop-portal-gtk ];
+  nix.gc = {
+    automatic = true;
+    dates = "weekly";
+    options = "--delete-older-than 14d";
   };
 
-  # PAQUETES útiles para Niri
-  environment.systemPackages = with pkgs; [
-    kitty
-    waybar
-    rofi-wayland
-    dunst
-    wl-clipboard
-    grim
-    slurp
-  ];
+  nix.optimise.automatic = true;
 
   nixpkgs.config.allowUnfree = true;
 
+  # ========================================
+  # USER
+  # ========================================
+
+  users.users.mj = {
+    isNormalUser = true;
+    description = "mj";
+
+    extraGroups = [
+      "wheel"
+      "networkmanager"
+      "video"
+      "audio"
+    ];
+  };
+
+  # ========================================
+  # NIRI
+  # ========================================
+
+  programs.niri.enable = true;
+
+  # ========================================
+  # DISPLAY MANAGER
+  # ========================================
+
+  services.displayManager.sddm = {
+    enable = true;
+    wayland.enable = true;
+  };
+
+  # ========================================
+  # XDG PORTAL
+  # ========================================
+
+  xdg.portal = {
+    enable = true;
+
+    xdgOpenUsePortal = true;
+
+    extraPortals = with pkgs; [
+      xdg-desktop-portal-gtk
+      xdg-desktop-portal-gnome
+    ];
+
+    config.common.default = "*";
+  };
+
+  # ========================================
   # AUDIO
+  # ========================================
+
+  security.rtkit.enable = true;
+
   services.pipewire = {
     enable = true;
-    pulse.enable = true;
-    alsa.enable = true;
-    alsa.support32Bit = true;
-  };
-  hardware.pulseaudio.enable = false;
 
-  # AMD
-  hardware.graphics.enable = true;
-  hardware.graphics.enable32Bit = true;
+    pulse.enable = true;
+
+    alsa = {
+      enable = true;
+      support32Bit = true;
+    };
+
+    jack.enable = true;
+  };
+
+  services.pulseaudio.enable = false;
+
+  # ========================================
+  # GPU AMD
+  # ========================================
+
   services.xserver.videoDrivers = [ "amdgpu" ];
 
-  system.stateVersion = "24.11";
+  hardware.graphics = {
+    enable = true;
+    enable32Bit = true;
+  };
+
+  # ========================================
+  # GAMING
+  # ========================================
+
+  programs.gamemode.enable = true;
+  programs.steam.enable = true;
+
+  # ========================================
+  # BLUETOOTH
+  # ========================================
+
+  hardware.bluetooth.enable = true;
+  services.blueman.enable = true;
+
+  # ========================================
+  # SSD TRIM
+  # ========================================
+
+  services.fstrim.enable = true;
+
+  # ========================================
+  # ZRAM
+  # ========================================
+
+  zramSwap = {
+    enable = true;
+    algorithm = "zstd";
+  };
+
+  # ========================================
+  # FLATPAK
+  # ========================================
+
+  services.flatpak.enable = true;
+
+  # ========================================
+  # APPIMAGE
+  # ========================================
+
+  programs.appimage = {
+    enable = true;
+    binfmt = true;
+  };
+
+  # ========================================
+  # DBUS
+  # ========================================
+
+  services.dbus.enable = true;
+
+  # ========================================
+  # FIRMWARE
+  # ========================================
+
+  services.fwupd.enable = true;
+
+  # ========================================
+  # FONTS
+  # ========================================
+
+  fonts.packages = with pkgs; [
+    nerd-fonts.jetbrains-mono
+    nerd-fonts.fira-code
+  ];
+
+  # ========================================
+  # ENV VARIABLES
+  # ========================================
+
+  environment.sessionVariables = {
+    NIXOS_OZONE_WL = "1";
+    MOZ_ENABLE_WAYLAND = "1";
+    QT_QPA_PLATFORM = "wayland";
+    SDL_VIDEODRIVER = "wayland";
+    CLUTTER_BACKEND = "wayland";
+  };
+
+  environment.variables = {
+    XCURSOR_THEME = "Bibata-Modern-Classic";
+    XCURSOR_SIZE = "24";
+  };
+
+  # ========================================
+  # PACKAGES
+  # ========================================
+
+  environment.systemPackages = with pkgs; [
+
+    # TERMINAL
+    kitty
+    fastfetch
+    btop
+    cava
+    fish
+    eza
+    bat
+    fzf
+    zoxide
+    ripgrep
+    starship
+
+    # NIRI
+    niri
+    waybar
+    rofi-wayland
+    mako
+    swaybg
+    swayidle
+    swaylock
+    grim
+    slurp
+    wl-clipboard
+    swaynotificationcenter
+
+    # AUDIO
+    pavucontrol
+    playerctl
+
+    # FILE MANAGER
+    kdePackages.dolphin
+    ffmpegthumbnailer
+    kdePackages.kdegraphics-thumbnailers
+
+    # THEMING
+    nwg-look
+    bibata-cursors
+    papirus-icon-theme
+
+    # MEDIA
+    spotify
+    vesktop
+    mpv
+    feh
+
+    # DEV
+    vscode
+
+    # SYSTEM
+    gparted
+    blueman
+
+    # AMD + VULKAN
+    mesa
+    vulkan-tools
+    vulkan-loader
+    vulkan-validation-layers
+    mangohud
+
+    # GAMING
+    wineWowPackages.stable
+    winetricks
+    lutris
+  ];
 }
