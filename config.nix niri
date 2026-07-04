@@ -1,295 +1,212 @@
 { config, pkgs, ... }:
-
 {
   imports = [
     ./hardware-configuration.nix
   ];
-
-  # ========================================
-  # SYSTEM VERSION
-  # ========================================
-
   system.stateVersion = "24.11";
-
-  # ========================================
-  # BOOT
-  # ========================================
-
-  boot.loader.systemd-boot.enable = true;
-  boot.loader.efi.canTouchEfiVariables = true;
-
-  
-  boot.kernelPackages = pkgs.linuxPackages_latest;
-
-  # ========================================
-  # NETWORK
-  # ========================================
-
-  networking.hostName = "nixos";
-  networking.networkmanager.enable = true;
-
-  # ========================================
-  # TIME + LOCALE
-  # ========================================
-
-  time.timeZone = "America/Bogota";
-
-  i18n.defaultLocale = "es_CO.UTF-8";
-
-  # ========================================
-  # NIX
-  # ========================================
-
   nix.settings = {
-    experimental-features = [
-      "nix-command"
-      "flakes"
-    ];
-
+    experimental-features = [ "nix-command" "flakes" ];
     auto-optimise-store = true;
   };
-
-  nix.gc = {
-    automatic = true;
-    dates = "weekly";
-    options = "--delete-older-than 14d";
-  };
-
-  nix.optimise.automatic = true;
-
   nixpkgs.config.allowUnfree = true;
-
-  # ========================================
-  # USER
-  # ========================================
-
+  # Boot
+  boot.loader.systemd-boot.enable = true;
+  boot.loader.systemd-boot.graceful = true; # necesario por el ESP compartido con Ventoy
+  boot.loader.efi.canTouchEfiVariables = true;
+  # Network
+  networking.hostName = "nixos";
+  networking.networkmanager.enable = true;
+  # Time & Locale
+  time.timeZone = "America/Bogota";
+  i18n.defaultLocale = "es_CO.UTF-8";
+  # User
   users.users.mj = {
     isNormalUser = true;
     description = "mj";
-
-    extraGroups = [
-      "wheel"
-      "networkmanager"
-      "video"
-      "audio"
-    ];
+    extraGroups = [ "wheel" "networkmanager" ];
+    shell = pkgs.fish;
   };
-
-  # ========================================
-  # NIRI
-  # ========================================
-
+  # Fish
+  programs.fish = {
+    enable = true;
+    interactiveShellInit = ''
+      export STARSHIP_CONFIG=/etc/starship.toml
+      starship init fish | source
+    '';
+  };
+  # Niri
   programs.niri.enable = true;
-
-  # ========================================
-  # DISPLAY MANAGER
-  # ========================================
-
+  # uwsm para manejo de sesión (recomendado para niri)
+  programs.uwsm.enable = true;
+  programs.uwsm.waylandCompositors.niri = {
+    prettyName = "Niri";
+    comment = "Niri compositor managed by uwsm";
+    binPath = "/run/current-system/sw/bin/niri-session";
+  };
+  # Steam
+  programs.steam = {
+    enable = true;
+    remotePlay.openFirewall = true;
+    dedicatedServer.openFirewall = true;
+  };
+  # SDDM
   services.displayManager.sddm = {
     enable = true;
     wayland.enable = true;
   };
-
-  # ========================================
-  # XDG PORTAL
-  # ========================================
-
-  xdg.portal = {
-    enable = true;
-
-    xdgOpenUsePortal = true;
-
-    extraPortals = with pkgs; [
-      xdg-desktop-portal-gtk
-      xdg-desktop-portal-gnome
-    ];
-
-    config.common.default = "*";
-  };
-
-  # ========================================
-  # AUDIO
-  # ========================================
-
-  security.rtkit.enable = true;
-
+services.displayManager.defaultSession = "niri-uwsm";
+  # Audio
+  services.pulseaudio.enable = false;
   services.pipewire = {
     enable = true;
-
+    alsa.enable = true;
+    alsa.support32Bit = true;
     pulse.enable = true;
-
-    alsa = {
-      enable = true;
-      support32Bit = true;
-    };
-
-    jack.enable = true;
+    wireplumber.enable = true;
   };
-
-  services.pulseaudio.enable = false;
-
-  # ========================================
-  # GPU AMD
-  # ========================================
-
-  services.xserver.videoDrivers = [ "amdgpu" ];
-
+  # AMD
   hardware.graphics = {
     enable = true;
     enable32Bit = true;
   };
-
-  # ========================================
-  # GAMING
-  # ========================================
-
   programs.gamemode.enable = true;
-  programs.steam.enable = true;
-
-  # ========================================
-  # BLUETOOTH
-  # ========================================
-
+  nixpkgs.config.permittedInsecurePackages = [
+    "ventoy-1.1.10"
+  ];
+  # Gnome services
+  services.gnome.gnome-keyring.enable = true;
+  services.tumbler.enable = true;
+  services.gnome.gnome-software.enable = true;
+  # Bluetooth
   hardware.bluetooth.enable = true;
   services.blueman.enable = true;
-
-  # ========================================
-  # SSD TRIM
-  # ========================================
-
-  services.fstrim.enable = true;
-
-  # ========================================
-  # ZRAM
-  # ========================================
-
-  zramSwap = {
-    enable = true;
-    algorithm = "zstd";
-  };
-
-  # ========================================
-  # FLATPAK
-  # ========================================
-
+  # Misc services
   services.flatpak.enable = true;
-
-  # ========================================
-  # APPIMAGE
-  # ========================================
-
-  programs.appimage = {
-    enable = true;
-    binfmt = true;
-  };
-
-  # ========================================
-  # DBUS
-  # ========================================
-
-  services.dbus.enable = true;
-
-  # ========================================
-  # FIRMWARE
-  # ========================================
-
   services.fwupd.enable = true;
+  services.fstrim.enable = true;
+  services.gvfs.enable = true;
+  services.udisks2.enable = true;
+  programs.xwayland.enable = true;
 
-  # ========================================
-  # FONTS
-  # ========================================
+  # AppImage
+  programs.nix-ld.enable = true;
 
+  # PAM - swaylock reemplaza a hyprlock
+  security.pam.services.swaylock = {};
+  xdg.portal = {
+    enable = true;
+    xdgOpenUsePortal = true;
+    extraPortals = [
+      pkgs.xdg-desktop-portal-gnome
+      pkgs.xdg-desktop-portal-gtk
+    ];
+    config.niri.default = [ "gnome" "gtk" ];
+    config.common.default = [ "gtk" ];
+  };
+  # Fonts
   fonts.packages = with pkgs; [
     nerd-fonts.jetbrains-mono
     nerd-fonts.fira-code
+    noto-fonts
+    noto-fonts-color-emoji
   ];
-
-  # ========================================
-  # ENV VARIABLES
-  # ========================================
-
+  # Wayland env
   environment.sessionVariables = {
     NIXOS_OZONE_WL = "1";
     MOZ_ENABLE_WAYLAND = "1";
-    QT_QPA_PLATFORM = "wayland";
-    SDL_VIDEODRIVER = "wayland";
-    CLUTTER_BACKEND = "wayland";
+    XDG_CURRENT_DESKTOP = "niri";
+    XDG_SESSION_TYPE = "wayland";
+    ELECTRON_OZONE_PLATFORM_HINT = "wayland";
   };
-
-  environment.variables = {
-    XCURSOR_THEME = "Bibata-Modern-Classic";
-    XCURSOR_SIZE = "24";
-  };
-
-  # ========================================
-  # PACKAGES
-  # ========================================
-
+  environment.etc."starship.toml".source = ./starship.toml;
   environment.systemPackages = with pkgs; [
-
-    # TERMINAL
+    # Shell
+    starship
+    fish
+    # Terminal
     kitty
     fastfetch
     btop
-    cava
-    fish
+    git
+    curl
+    wget
+    unzip
     eza
     bat
+    ripgrep
     fzf
     zoxide
-    ripgrep
-    starship
+    cava
+    tty-clock
+    mapscii
+    cmatrix
+    gtop
+    ani-cli
+    gparted
+    anydesk
+    wlogout    
 
-    # NIRI
-    niri
+#Pentesting / Cibersecurity 
+   nmap
+   hydra
+   metasploit
+   radare2 yara
+   chntpw  
+
+    # Niri ecosystem 
+    swaybg          
+    swaylock       
+    swayidle        
+    xwayland-satellite 
     waybar
-    rofi-wayland
-    mako
-    swaybg
-    swayidle
-    swaylock
-    grim
-    slurp
-    wl-clipboard
+    fuzzel
     swaynotificationcenter
-
-    # AUDIO
-    pavucontrol
+    cliphist
+    wl-clipboard
     playerctl
-
-    # FILE MANAGER
-    kdePackages.dolphin
-    ffmpegthumbnailer
-    kdePackages.kdegraphics-thumbnailers
-
-    # THEMING
-    nwg-look
     bibata-cursors
     papirus-icon-theme
-
-    # MEDIA
-    spotify
-    vesktop
-    mpv
-    feh
-
-    # DEV
+    brightnessctl
+    quickshell
+    matugen
+    swayosd
+    rofi
+    socat
+    jq
+    # File manager
+    nautilus
+    file-roller
+    loupe
+    ffmpegthumbnailer
+    gnome-disk-utility
+    # Browser / Apps
+    firefox
     vscode
+    mpv
+    spotify
+    discord
+    brave
 
-    # SYSTEM
-    gparted
-    blueman
+    # Audio
+    pavucontrol
+    wireplumber
 
-    # AMD + VULKAN
-    mesa
-    vulkan-tools
-    vulkan-loader
-    vulkan-validation-layers
-    mangohud
-
-    # GAMING
-    wineWowPackages.stable
-    winetricks
+    # Network
+    networkmanagerapplet
+    # Screenshots (grim+slurp funcionan igual en niri)
+    grim
+    slurp
+    libnotify
+    # Gaming
     lutris
+    mangohud
+    vulkan-tools
+    steam-run
+    # AppImage
+    appimage-run
+    fuse
+    fuse3
+    desktop-file-utils
+    xdg-utils
   ];
 }
