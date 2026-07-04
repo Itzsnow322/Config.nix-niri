@@ -1,1 +1,58 @@
+* {
+    font-family: "Maple Mono NF";
+    font-size: 13px;
+    border: none;
+    min-height: 0;
+}
 
+window#waybar {
+    background: rgba(42, 42, 42, 0.55);
+    color: #e5e5e5;
+
+    border-radius: 14px;
+    margin: 6px;
+}
+
+#workspaces {
+    margin: 4px;
+}
+
+#workspaces button {
+    padding: 0 8px;
+    color: #8e8e8e;
+    border-radius: 10px;
+    background: transparent;
+    transition: all 0.2s ease;
+}
+
+#workspaces button:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: #f0f0f0;
+}
+
+#workspaces button.active {
+    background: rgba(255, 255, 255, 0.14);
+    color: #ffffff;
+}
+
+#clock,
+#cpu,
+#custom-gpu,
+#memory,
+#network,
+#pulseaudio,
+#tray,
+#mpris,
+#custom-nixos {
+    padding: 0 12px;
+    margin: 4px 2px;
+
+    background: rgba(70, 70, 70, 0.35);
+    color: #e5e5e5;
+    border-radius: 10px;
+}
+
+#custom-nixos {
+    color: #d0d0d0;
+    font-size: 16px;
+}
