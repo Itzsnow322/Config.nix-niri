@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+
+WALL_DIR="$HOME/Pictures/Wallpapers"
+
+wall=$(find "$WALL_DIR" -type f \
+    \( -iname "*.jpg" -o -iname "*.jpeg" -o -iname "*.png" -o -iname "*.webp" \) \
+    | sort | fuzzel --dmenu --prompt "󰸉 Wallpaper > ")
+
+[ -z "$wall" ] && exit
+
+# Reiniciar swaybg con el nuevo fondo
+pkill -x swaybg
+swaybg -i "$wall" -m fill &
+
+mkdir -p "$HOME/.cache"
+echo "$wall" > "$HOME/.cache/current_wallpaper"
